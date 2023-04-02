@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -16,16 +13,8 @@ from sklearn.utils import check_random_state
 from scipy.spatial.distance import cdist
 from decimal import Decimal
 
-
-# In[2]:
-
-
 import warnings
 warnings.filterwarnings("ignore")
-
-
-# In[3]:
-
 
 def perm_free_D(D):
     D_temp = np.copy(D)
@@ -55,10 +44,6 @@ def perm_free_DS(D, X):
     
     return (D_new, X_temp)
 
-
-# In[4]:
-
-
 def make_sparse_coded_signal1(
     n_samples,
     *,
@@ -68,43 +53,6 @@ def make_sparse_coded_signal1(
     random_state=None,
     data_transposed="warn",
 ):
-    """Generate a signal as a sparse combination of dictionary elements.
-    Returns a matrix Y = DX, such that D is (n_features, n_components),
-    X is (n_components, n_samples) and each column of X has exactly
-    n_nonzero_coefs non-zero elements.
-    Read more in the :ref:`User Guide <sample_generators>`.
-    Parameters
-    ----------
-    n_samples : int
-        Number of samples to generate.
-    n_components : int
-        Number of components in the dictionary.
-    n_features : int
-        Number of features of the dataset to generate.
-    n_nonzero_coefs : int
-        Number of active (non-zero) coefficients in each sample.
-    random_state : int, RandomState instance or None, default=None
-        Determines random number generation for dataset creation. Pass an int
-        for reproducible output across multiple function calls.
-        See :term:`Glossary <random_state>`.
-    data_transposed : bool, default=True
-        By default, Y, D and X are transposed.
-        .. versionadded:: 1.1
-    Returns
-    -------
-    data : ndarray of shape (n_features, n_samples) or (n_samples, n_features)
-        The encoded signal (Y). The shape is `(n_samples, n_features)` if
-        `data_transposed` is False, otherwise it's `(n_features, n_samples)`.
-    dictionary : ndarray of shape (n_features, n_components) or \
-            (n_components, n_features)
-        The dictionary with normalized components (D). The shape is
-        `(n_components, n_features)` if `data_transposed` is False, otherwise it's
-        `(n_features, n_components)`.
-    code : ndarray of shape (n_components, n_samples) or (n_samples, n_components)
-        The sparse code such that each column of this matrix has exactly
-        n_nonzero_coefs non-zero items (X). The shape is `(n_samples, n_components)`
-        if `data_transposed` is False, otherwise it's `(n_components, n_samples)`.
-    """
     generator = check_random_state(random_state)
 
     # generate dictionary
@@ -128,19 +76,11 @@ def make_sparse_coded_signal1(
 
     return map(np.squeeze, (Y, D, X))
 
-
-# In[5]:
-
-
 def dict_reconstruction(Y, n_comp):
     dict_learner = DictionaryLearning(n_components=n_comp                                  , max_iter=1000, transform_alpha=0.1)
     XhatT = dict_learner.fit_transform(Y.T)
     (Dhat_, Xhat_) = perm_free_DS(dict_learner.components_.T, XhatT.T)
     return (Dhat_, Xhat_)
-
-
-# In[6]:
-
 
 n_nonzero_coefs=10
 n_comp=100
@@ -155,12 +95,6 @@ n_samp = 10000
 ####### custom #######
 Y, D, X = make_sparse_coded_signal(
 n_samples=n_samp, n_components=n_comp, n_features=n_feat, n_nonzero_coefs=n_nonzero_coefs)
-
-
-# # Online dictionary learning 
-
-# In[7]:
-
 
 import torch
 import torch.nn as nn
@@ -185,10 +119,6 @@ m = n_comp     # Dictionary Size
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
-# In[8]:
-
-
 input_dim = n_feat
 n_samples = n_samp
 trainset=Y.T
@@ -203,19 +133,11 @@ train_data = TensorDataset(tensor_y) # create your datset
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE,
                                          shuffle=True, num_workers=2)
 
-
-# In[9]:
-
-
 import Dictionary_Model as modelDL
 
 model = modelDL.DictLearn(input_dim, m).to(device)
 optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=MNT)
 loss_func = nn.MSELoss()
-
-
-# In[10]:
-
 
 import importlib
 importlib.reload(modelDL)
@@ -234,10 +156,6 @@ K = n_nonzero_coefs         # sparsity parameter: float numer if 'fista' or card
 # K = 0.2         # sparsity parameter: float numer if 'fista' or cardinality constraint if 'IHT'
 
 Err = []
-
-
-# In[11]:
-
 
 model.W = torch.nn.Parameter(torch.tensor(D, dtype=torch.float))
 for epoch in range(EPOCH):
@@ -265,11 +183,6 @@ for epoch in range(EPOCH):
     Error[epoch] /= (step+1)
     Nnz[epoch] /= (step+1)
     print('Epoch: %d\tError: %.2e\t\tTrain loss: %.2e\t\tNNZ/(1-sparsity): %.2e' % (epoch, Decimal(Error[epoch]), Decimal(Loss[epoch]), Decimal(Nnz[epoch])), end="\r")
-    
-
-
-# In[12]:
-
 
 def dict_reconstruction_online(Y, n_comp, n_nonzero_coefs, n_feat, n_samp):
     EPOCH = 50
@@ -348,11 +261,6 @@ def dict_reconstruction_online(Y, n_comp, n_nonzero_coefs, n_feat, n_samp):
             Err = np.append(Err,errIHT[-1])
             Nnz[epoch] = Nnz[epoch] + np.count_nonzero(encoded.cpu().numpy())/encoded.cpu().numpy().size
 
-    #         # for debugging:
-    #         print(Error[epoch]/(step+1))
-    #         if step%50==0:
-    #             plt.plot(errIHT); plt.show()
-
         Loss[epoch] /= len(trainloader.dataset)
         Error[epoch] /= (step+1)
         Nnz[epoch] /= (step+1)
@@ -378,10 +286,6 @@ def dict_reconstruction_online(Y, n_comp, n_nonzero_coefs, n_feat, n_samp):
     Nnz_ /= (step+1)
 
     return (model, Loss[-1], Loss_.data.numpy())
-
-
-# In[13]:
-
 
 N = 20
 M = 20
@@ -411,43 +315,6 @@ for M in [10]:
     plt.show()
     print(np.around(M, decimals = 2), ' - ', temp_error/(M*N), loss/M, loss_/M)
     error.append(temp_error)
-
-
-# In[14]:
-
-
-# N = 60
-# M = 30
-# EPOCH = 50
-# rho = 0.1
-
-# error = []
-# for P in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]:
-#     piter = 100
-#     temp_error_ = []
-#     for it in np.r_[:piter]:
-#         Y, D, X = make_sparse_coded_signal(
-#         n_samples=P+100, n_components=N, n_features=M, n_nonzero_coefs=int(rho * N))
-
-#         # Random undersample
-#         (D_, X_) = perm_free_DS(D, X)
-
-#         # Reconstruct
-#         (model, Dhat, loss) = dict_reconstruction_online(Y, N, int(rho * N), M, P)
-#         Dhat_ = perm_free_D(Dhat)
-#         temp = cdist(Dhat_.T, D_.T)
-#         temp_error = 0
-#         for atom_index in range(N):
-#             temp_error += np.min(temp[atom_index, :])
-#         temp_error_.append(temp_error)
-#     error.append(np.percentile(np.array(temp_error_), q = 50))
-#     print(error[-1])
-
-
-# # Dictionary learning phase curve
-
-# In[15]:
-
 
 # Create a 128 x 128 phase transition matrix
 phase_transition = np.zeros( (32,32) )
@@ -489,11 +356,6 @@ for it in np.r_[:piter]:
 phase_transition = phase_transition / piter
 print("done")
         
-
-
-# In[16]:
-
-
 # Plot phase transition matrix
 plt.figure(figsize=(6, 6))
 plt.imshow(phase_transition[1:-1,1:-1], origin='lower',  extent = (0.03125, 1-0.03125, 0.03125, 1-0.03125))
@@ -501,12 +363,5 @@ plt.colorbar()
 plt.title( 'Phase Transition' )
 plt.ylabel('rho = K/N')
 plt.xlabel('pi = P/N')
-
-
-# In[ ]:
-
-
-
-
 
 # Idea (by Anirvan): Feed in the X that we obtain here into an autoencoder. 
